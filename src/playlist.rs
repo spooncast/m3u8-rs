@@ -5,10 +5,10 @@
 
 use std::io::Write;
 use std::collections::HashMap;
+use std::time::Duration;
 use std::str::FromStr;
 use std::fmt;
 use super::*;
-use std::f32;
 
 macro_rules! write_some_attribute_quoted {
     ($w:expr, $tag:expr, $o:expr) => (
@@ -392,7 +392,7 @@ impl SessionData {
 pub struct MediaPlaylist {
     pub version: usize,
     /// `#EXT-X-TARGETDURATION:<s>`
-    pub target_duration: f32,
+    pub target_duration: Duration,
     /// `#EXT-X-MEDIA-SEQUENCE:<number>`
     pub media_sequence: i32,
     pub segments: Vec<MediaSegment>,
@@ -425,7 +425,7 @@ impl MediaPlaylist {
                     media_playlist.version = v;
                 }
                 MediaPlaylistTag::TargetDuration(d) => {
-                    media_playlist.target_duration = d;
+                    media_playlist.target_duration = Duration::from_secs_f32(d);
                 }
                 MediaPlaylistTag::MediaSequence(n) => {
                     media_playlist.media_sequence = n;
@@ -451,7 +451,7 @@ impl MediaPlaylist {
                 MediaPlaylistTag::Segment(segment_tag) => {
                     match segment_tag {
                         SegmentTag::Extinf(d, t) => {
-                            next_segment.duration = d;
+                            next_segment.duration = Duration::from_secs_f32(d);
                             next_segment.title = t;
                         }
                         SegmentTag::ByteRange(b) => {
@@ -493,7 +493,7 @@ impl MediaPlaylist {
     pub fn write_to<T: Write>(&self, w: &mut T) -> std::io::Result<()> {
         writeln!(w, "{}" ,"#EXTM3U")?;
         writeln!(w, "#EXT-X-VERSION:{}", self.version)?;
-        writeln!(w, "#EXT-X-TARGETDURATION:{}", self.target_duration)?;
+        writeln!(w, "#EXT-X-TARGETDURATION:{}", self.target_duration.as_secs_f32())?;
 
         if self.media_sequence != 0 {
             writeln!(w, "#EXT-X-MEDIA-SEQUENCE:{}", self.media_sequence)?;
@@ -569,7 +569,7 @@ impl Default for MediaPlaylistType {
 pub struct MediaSegment {
     pub uri: String,
     /// `#EXTINF:<duration>,[<title>]`
-    pub duration: f32,
+    pub duration: Duration,
     /// `#EXTINF:<duration>,[<title>]`
     pub title: Option<String>,
     /// `#EXT-X-BYTERANGE:<n>[@<o>]`
@@ -618,7 +618,7 @@ impl MediaSegment {
             writeln!(w, "#EXT-X-DATERANGE:{}", v)?;
         }
 
-        write!(w, "#EXTINF:{},", self.duration)?;
+        write!(w, "#EXTINF:{},", self.duration.as_secs_f32())?;
 
         if let Some(ref v) = self.title {
             writeln!(w, "{}", v)?;
